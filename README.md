@@ -1,59 +1,854 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Laravel 11 Multi-Tenant SaaS Application
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A production-ready Laravel 11 SaaS application demonstrating clean architecture, single-database multi-tenancy, role-based access control (RBAC), subscription management, and secure REST APIs.
 
-## About Laravel
+## 📋 Table of Contents
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [Installation](#installation)
+- [Database Setup](#database-setup)
+- [API Documentation](#api-documentation)
+- [Role Responsibilities](#role-responsibilities)
+- [Subscription Plans](#subscription-plans)
+- [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Assumptions](#assumptions)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🎯 Overview
 
-## Learning Laravel
+This application is a multi-tenant task management system where multiple companies (tenants) share a single database while maintaining complete data isolation. Each company can have multiple users with different roles, and companies are restricted by subscription plans that limit feature usage.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Key Highlights
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Single Database Multi-Tenancy**: All tenants share one database with strict data isolation
+- **Clean Architecture**: Service layer, Repository pattern, and thin controllers
+- **RBAC**: Policy-based authorization (no role checks in controllers)
+- **Subscription Management**: Plan-based feature restrictions (Free/Pro)
+- **Event-Driven**: Asynchronous notifications using Laravel Queue
+- **RESTful API**: Token-based authentication with Laravel Sanctum
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## ✨ Features
 
-### Premium Partners
+### Authentication & Authorization
+- User registration and login
+- Token-based authentication using Laravel Sanctum
+- Policy-based authorization (Gates and Policies)
+- Three-tier role system (Admin, Company Owner, Company Member)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Multi-Tenancy
+- Single database with tenant isolation
+- Middleware-enforced tenant scoping
+- Each user belongs to exactly one company
+- Automatic tenant context resolution
 
-## Contributing
+### Task Management
+- Full CRUD operations for tasks
+- Task filtering by status and priority
+- Search by title
+- Soft deletes
+- Due date tracking
+- Tenant-scoped access
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Subscription System
+- **Free Plan**: Maximum 5 tasks per company
+- **Pro Plan**: Unlimited tasks
+- Service-layer enforcement of plan limits
+- Graceful error handling for limit violations
 
-## Code of Conduct
+### Advanced Features
+- Event-driven task creation notifications
+- Queue-based email notifications
+- API rate limiting (60 requests/minute)
+- N+1 query prevention with eager loading
+- Database indexing for performance
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🏗️ Architecture
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+This application follows **Clean Architecture** principles with clear separation of concerns:
 
-## License
+```
+┌─────────────────────────────────────────────────────┐
+│                   Controllers                        │
+│            (Thin - Only HTTP concerns)              │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                 Form Requests                        │
+│              (Input Validation)                      │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                   Policies                           │
+│              (Authorization Logic)                   │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                   Services                           │
+│           (Business Logic Layer)                     │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                 Repositories                         │
+│            (Data Access Layer)                       │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│                 Eloquent Models                      │
+│              (Domain Entities)                       │
+└─────────────────────────────────────────────────────┘
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Architectural Patterns
+
+1. **Service Layer Pattern**: Business logic isolated in service classes
+2. **Repository Pattern**: Data access abstraction with interfaces
+3. **Policy Pattern**: Authorization logic separated from controllers
+4. **Event-Driven Architecture**: Asynchronous task handling with events and listeners
+5. **Dependency Injection**: Interface-based dependency management
+
+### Multi-Tenancy Implementation
+
+- **Tenant Identification**: Via authenticated user's company relationship
+- **Data Isolation**: Global scopes and middleware enforcement
+- **Route Protection**: Middleware validates tenant ownership on all company-scoped routes
+
+---
+
+## 🛠️ Technology Stack
+
+- **Framework**: Laravel 11.x
+- **PHP**: 8.2+
+- **Database**: MySQL 8.0+ / PostgreSQL 14+
+- **Authentication**: Laravel Sanctum
+- **Queue Driver**: Database (configurable to Redis)
+- **Cache**: File/Redis
+- **Frontend Assets**: Vite
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+
+- PHP >= 8.2
+- Composer
+- Node.js >= 18.x
+- MySQL >= 8.0 or PostgreSQL >= 14
+- Redis (optional, for queue and cache)
+
+### Step-by-Step Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd laravel-saas-app
+   ```
+
+2. **Install PHP dependencies**
+   ```bash
+   composer install
+   ```
+
+3. **Install Node dependencies**
+   ```bash
+   npm install && npm run build
+   ```
+
+4. **Environment configuration**
+   ```bash
+   cp .env.example .env
+   ```
+
+5. **Generate application key**
+   ```bash
+   php artisan key:generate
+   ```
+
+6. **Configure database** (Edit `.env`)
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=laravel_saas
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
+
+7. **Configure mail** (Edit `.env`)
+   ```env
+   MAIL_MAILER=smtp
+   MAIL_HOST=mailpit
+   MAIL_PORT=1025
+   MAIL_USERNAME=null
+   MAIL_PASSWORD=null
+   MAIL_ENCRYPTION=null
+   MAIL_FROM_ADDRESS="noreply@example.com"
+   MAIL_FROM_NAME="${APP_NAME}"
+   ```
+
+8. **Configure queue** (Edit `.env`)
+   ```env
+   QUEUE_CONNECTION=database
+   ```
+
+9. **Run migrations and seeders**
+   ```bash
+   php artisan migrate --seed
+   ```
+
+10. **Start the queue worker** (In a separate terminal)
+    ```bash
+    php artisan queue:work
+    ```
+
+11. **Start the development server**
+    ```bash
+    php artisan serve
+    ```
+
+The application will be available at `http://localhost:8000`
+
+---
+
+## 💾 Database Setup
+
+### Database Schema Overview
+
+```
+users
+├── id
+├── name
+├── email
+├── password
+├── role (enum: admin, owner, member)
+├── company_id (foreign key)
+├── is_active
+└── timestamps
+
+companies
+├── id
+├── name
+├── status (enum: active, inactive)
+├── plan_id (foreign key)
+└── timestamps
+
+plans
+├── id
+├── name (Free, Pro)
+├── max_tasks (nullable)
+└── timestamps
+
+tasks
+├── id
+├── company_id (foreign key)
+├── title
+├── description
+├── status (enum: pending, in_progress, completed)
+├── priority (enum: low, medium, high)
+├── due_date
+├── deleted_at (soft delete)
+└── timestamps
+```
+
+### Seeded Data
+
+After running `php artisan migrate --seed`, you'll have:
+
+**Plans:**
+- Free Plan (max 5 tasks)
+- Pro Plan (unlimited tasks)
+
+**Test Companies:**
+
+1. **Acme Corp** (Free Plan)
+   - Owner: owner@acme.com / password
+   - Member: member@acme.com / password
+
+2. **Tech Innovations** (Pro Plan)
+   - Owner: owner@techinnovations.com / password
+   - Member: member@techinnovations.com / password
+
+**Admin Account:**
+- Email: admin@example.com
+- Password: password
+
+---
+
+## 🔌 API Documentation
+
+### Base URL
+```
+http://localhost:8000/api
+```
+
+### Authentication
+
+All API endpoints (except login and register) require authentication via Bearer token.
+
+**Headers:**
+```
+Authorization: Bearer {token}
+Accept: application/json
+Content-Type: application/json
+```
+
+---
+
+### Endpoints
+
+#### 1. Authentication
+
+##### Register
+```http
+POST /api/register
+```
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "password_confirmation": "password123",
+  "company_name": "My Company"
+}
+```
+
+**Response (201):**
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "owner",
+    "company_id": 1
+  },
+  "token": "1|abc123...",
+  "company": {
+    "id": 1,
+    "name": "My Company",
+    "status": "active"
+  }
+}
+```
+
+##### Login
+```http
+POST /api/login
+```
+
+**Request Body:**
+```json
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+```
+
+**Response (200):**
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "owner"
+  },
+  "token": "2|xyz789..."
+}
+```
+
+##### Logout
+```http
+POST /api/logout
+```
+
+**Response (200):**
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+#### 2. Tasks
+
+##### List Tasks (with filters)
+```http
+GET /api/tasks
+```
+
+**Query Parameters:**
+- `status` (optional): `pending`, `in_progress`, `completed`
+- `priority` (optional): `low`, `medium`, `high`
+- `search` (optional): Search by title
+
+**Example:**
+```http
+GET /api/tasks?status=pending&priority=high&search=urgent
+```
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "title": "Complete project documentation",
+      "description": "Write comprehensive docs",
+      "status": "pending",
+      "priority": "high",
+      "due_date": "2026-02-15",
+      "created_at": "2026-02-01T10:00:00.000000Z"
+    }
+  ]
+}
+```
+
+##### Create Task
+```http
+POST /api/tasks
+```
+
+**Request Body:**
+```json
+{
+  "title": "New Task",
+  "description": "Task description here",
+  "status": "pending",
+  "priority": "medium",
+  "due_date": "2026-02-15"
+}
+```
+
+**Response (201):**
+```json
+{
+  "data": {
+    "id": 2,
+    "title": "New Task",
+    "description": "Task description here",
+    "status": "pending",
+    "priority": "medium",
+    "due_date": "2026-02-15",
+    "created_at": "2026-02-01T11:00:00.000000Z"
+  }
+}
+```
+
+**Error Response (422) - Plan Limit Exceeded:**
+```json
+{
+  "message": "Task limit exceeded. Your Free plan allows maximum 5 tasks. Upgrade to Pro for unlimited tasks."
+}
+```
+
+##### Show Task
+```http
+GET /api/tasks/{id}
+```
+
+**Response (200):**
+```json
+{
+  "data": {
+    "id": 1,
+    "title": "Complete project documentation",
+    "description": "Write comprehensive docs",
+    "status": "pending",
+    "priority": "high",
+    "due_date": "2026-02-15"
+  }
+}
+```
+
+##### Update Task
+```http
+PUT /api/tasks/{id}
+```
+
+**Request Body:**
+```json
+{
+  "title": "Updated Task Title",
+  "status": "in_progress",
+  "priority": "low"
+}
+```
+
+**Response (200):**
+```json
+{
+  "data": {
+    "id": 1,
+    "title": "Updated Task Title",
+    "status": "in_progress",
+    "priority": "low",
+    "due_date": "2026-02-15"
+  }
+}
+```
+
+##### Delete Task
+```http
+DELETE /api/tasks/{id}
+```
+
+**Response (204):**
+No content
+
+---
+
+### HTTP Status Codes
+
+- `200 OK` - Successful GET, PUT requests
+- `201 Created` - Successful POST request
+- `204 No Content` - Successful DELETE request
+- `401 Unauthorized` - Missing or invalid token
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource not found
+- `422 Unprocessable Entity` - Validation error
+- `429 Too Many Requests` - Rate limit exceeded
+
+---
+
+### Rate Limiting
+
+API endpoints are rate-limited to **60 requests per minute** per user.
+
+**Rate Limit Headers:**
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+```
+
+When limit exceeded (429):
+```json
+{
+  "message": "Too Many Requests"
+}
+```
+
+---
+
+## 👥 Role Responsibilities
+
+### Admin
+- **Scope**: System-wide access
+- **Abilities**:
+  - Manage all companies
+  - Manage all users
+  - View all tasks across tenants
+  - System configuration
+- **Restrictions**: Cannot be part of any company
+
+### Company Owner
+- **Scope**: Single company (tenant)
+- **Abilities**:
+  - Full CRUD on company tasks
+  - Invite new users to company
+  - Activate/deactivate company members
+  - Manage company settings
+  - Upgrade/downgrade subscription
+- **Restrictions**: Cannot access other companies' data
+
+### Company Member
+- **Scope**: Single company (tenant)
+- **Abilities**:
+  - Create tasks
+  - View tasks within their company
+  - Update their own tasks
+  - Delete their own tasks
+- **Restrictions**: 
+  - Cannot manage users
+  - Cannot access other companies' data
+  - Cannot change company settings
+
+---
+
+## 💳 Subscription Plans
+
+### Free Plan
+- **Price**: $0/month
+- **Task Limit**: 5 tasks maximum
+- **Features**:
+  - Basic task management
+  - Up to 5 active users
+  - Email support
+
+### Pro Plan
+- **Price**: $29/month (example)
+- **Task Limit**: Unlimited
+- **Features**:
+  - Unlimited tasks
+  - Unlimited users
+  - Priority support
+  - Advanced reporting
+  - API access
+
+### Plan Enforcement
+
+Task limits are enforced at the **service layer** using the `TaskService`:
+
+```php
+// Service checks plan limit before creation
+if (!$this->canCreateTask($companyId)) {
+    throw new \Exception('Task limit exceeded for your plan');
+}
+```
+
+This ensures business rules are centralized and cannot be bypassed through different entry points.
+
+---
+
+## 📁 Project Structure
+
+```
+laravel-saas-app/
+│
+├── app/
+│   ├── Enums/                      # Enumeration classes
+│   │   ├── PlanType.php
+│   │   ├── TaskPriority.php
+│   │   ├── TaskStatus.php
+│   │   └── UserRole.php
+│   │
+│   ├── Events/                     # Event classes
+│   │   └── TaskCreated.php
+│   │
+│   ├── Listeners/                  # Event listeners
+│   │   └── SendTaskCreatedNotification.php
+│   │
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── Api/               # API controllers
+│   │   │   │   ├── AuthController.php
+│   │   │   │   └── TaskController.php
+│   │   │   └── Web/               # Web controllers
+│   │   │
+│   │   ├── Middleware/            # Custom middleware
+│   │   │   └── EnsureTenantAccess.php
+│   │   │
+│   │   ├── Requests/              # Form request validation
+│   │   │   ├── LoginRequest.php
+│   │   │   ├── RegisterRequest.php
+│   │   │   ├── StoreTaskRequest.php
+│   │   │   └── UpdateTaskRequest.php
+│   │   │
+│   │   └── Resources/             # API resources
+│   │       ├── TaskResource.php
+│   │       └── UserResource.php
+│   │
+│   ├── Models/                    # Eloquent models
+│   │   ├── Company.php
+│   │   ├── Plan.php
+│   │   ├── Task.php
+│   │   └── User.php
+│   │
+│   ├── Policies/                  # Authorization policies
+│   │   ├── CompanyPolicy.php
+│   │   ├── TaskPolicy.php
+│   │   └── UserPolicy.php
+│   │
+│   ├── Providers/
+│   │   ├── AppServiceProvider.php
+│   │   ├── AuthServiceProvider.php   # Policy registration
+│   │   └── EventServiceProvider.php  # Event registration
+│   │
+│   ├── Repositories/              # Repository pattern
+│   │   ├── Eloquent/
+│   │   │   ├── CompanyRepository.php
+│   │   │   ├── TaskRepository.php
+│   │   │   └── UserRepository.php
+│   │   └── Interfaces/
+│   │       ├── CompanyRepositoryInterface.php
+│   │       ├── TaskRepositoryInterface.php
+│   │       └── UserRepositoryInterface.php
+│   │
+│   └── Services/                  # Business logic services
+│       ├── Implementations/
+│       │   ├── CompanyService.php
+│       │   ├── TaskService.php
+│       │   └── UserService.php
+│       └── Interfaces/
+│           ├── CompanyServiceInterface.php
+│           ├── TaskServiceInterface.php
+│           └── UserServiceInterface.php
+│
+├── database/
+│   ├── migrations/                # Database migrations
+│   │   ├── 2024_01_01_000000_create_plans_table.php
+│   │   ├── 2024_01_01_000001_create_companies_table.php
+│   │   ├── 2024_01_01_000002_create_users_table.php
+│   │   └── 2024_01_01_000003_create_tasks_table.php
+│   │
+│   └── seeders/                   # Database seeders
+│       ├── DatabaseSeeder.php
+│       ├── PlanSeeder.php
+│       ├── CompanySeeder.php
+│       └── UserSeeder.php
+│
+├── routes/
+│   ├── api.php                    # API routes
+│   └── web.php                    # Web routes
+│
+├── tests/
+│   ├── Feature/                   # Feature tests
+│   └── Unit/                      # Unit tests
+│
+├── .env.example                   # Environment example
+├── composer.json
+├── package.json
+└── README.md
+```
+
+---
+
+## 🧪 Testing
+
+### Run All Tests
+```bash
+php artisan test
+```
+
+### Run Specific Test Suite
+```bash
+php artisan test --testsuite=Feature
+php artisan test --testsuite=Unit
+```
+
+### Run with Coverage
+```bash
+php artisan test --coverage
+```
+
+### Test Database
+Tests use an in-memory SQLite database by default. Configure in `phpunit.xml`:
+
+```xml
+<env name="DB_CONNECTION" value="sqlite"/>
+<env name="DB_DATABASE" value=":memory:"/>
+```
+
+---
+
+## 📝 Assumptions
+
+1. **Single Company Membership**: Each user belongs to exactly one company. Users cannot be members of multiple companies simultaneously.
+
+2. **Immutable Plan Limits**: Plan limits (e.g., max tasks) are defined in the database but can only be changed by administrators, not through the API.
+
+3. **Company Creation on Registration**: When a user registers, a new company is automatically created with the user as the owner on the Free plan.
+
+4. **Soft Deletes**: Tasks use soft deletes to maintain data integrity and allow for potential recovery.
+
+5. **Email Verification**: Email verification is not implemented but can be easily added using Laravel's built-in email verification features.
+
+6. **Task Ownership**: All tasks belong to companies, not individual users. Any company member can view/edit any task within their company (subject to policy restrictions).
+
+7. **Queue Configuration**: The application uses database queues by default. For production, Redis is recommended for better performance.
+
+8. **Rate Limiting**: API rate limiting is set to 60 requests/minute per user. This can be adjusted in `app/Providers/RouteServiceProvider.php`.
+
+9. **Timezone**: All dates and times are stored in UTC. Application timezone can be configured in `config/app.php`.
+
+10. **File Storage**: No file upload functionality is implemented. If needed, use Laravel's filesystem and cloud storage integration.
+
+11. **Payment Integration**: Subscription management does not include payment gateway integration (Stripe, PayPal, etc.). This would be added based on business requirements.
+
+12. **API Versioning**: API routes are not versioned (e.g., `/api/v1/`). For production, consider implementing versioning for backward compatibility.
+
+---
+
+## 🔒 Security Considerations
+
+1. **Token Management**: API tokens should be stored securely and rotated regularly
+2. **Password Policy**: Enforce strong password requirements in production
+3. **HTTPS**: Always use HTTPS in production environments
+4. **Input Validation**: All user inputs are validated using Form Requests
+5. **SQL Injection**: Protected by Laravel's query builder and Eloquent ORM
+6. **XSS Protection**: Blade templating auto-escapes output
+7. **CSRF Protection**: Enabled by default for web routes
+8. **Rate Limiting**: Prevents brute force and DDoS attacks
+
+---
+
+## 🚀 Deployment
+
+### Production Checklist
+
+- [ ] Set `APP_ENV=production` in `.env`
+- [ ] Set `APP_DEBUG=false` in `.env`
+- [ ] Generate new `APP_KEY`
+- [ ] Configure production database
+- [ ] Set up Redis for cache and queues
+- [ ] Configure mail service (SendGrid, Mailgun, etc.)
+- [ ] Enable HTTPS
+- [ ] Set up queue workers with Supervisor
+- [ ] Configure scheduled tasks (cron)
+- [ ] Set up error tracking (Sentry, Bugsnag)
+- [ ] Enable log rotation
+- [ ] Run `composer install --optimize-autoloader --no-dev`
+- [ ] Run `php artisan config:cache`
+- [ ] Run `php artisan route:cache`
+- [ ] Run `php artisan view:cache`
+
+### Recommended Hosting
+- Laravel Forge + AWS/DigitalOcean
+- Laravel Vapor (serverless)
+- Heroku
+- Platform.sh
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 📞 Support
+
+For issues and questions:
+- Create an issue in the repository
+- Email: support@example.com
+- Documentation: https://laravel.com/docs
+
+---
+
+## 🙏 Acknowledgments
+
+- Laravel Framework - Taylor Otwell and contributors
+- Laravel Sanctum - Authentication system
+- Clean Architecture principles - Robert C. Martin
+- Multi-tenancy patterns - Laravel community
+
+---
+
+**Built with ❤️ using Laravel 11**
