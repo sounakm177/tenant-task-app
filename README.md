@@ -157,7 +157,7 @@ This application follows **Clean Architecture** principles with clear separation
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd laravel-saas-app
+   cd tenant-task-app
    ```
 
 2. **Install PHP dependencies**
