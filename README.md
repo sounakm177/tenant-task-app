@@ -1,6 +1,6 @@
-# Laravel 11 Multi-Tenant SaaS Application
+# Laravel 12 Multi-Tenant SaaS Application
 
-A production-ready Laravel 11 SaaS application demonstrating clean architecture, single-database multi-tenancy, role-based access control (RBAC), subscription management, and secure REST APIs.
+A production-ready Laravel 12 SaaS application demonstrating clean architecture, single-database multi-tenancy, role-based access control (RBAC), subscription management, and secure REST APIs.
 
 ## 📋 Table of Contents
 
@@ -11,11 +11,13 @@ A production-ready Laravel 11 SaaS application demonstrating clean architecture,
 - [Installation](#installation)
 - [Database Setup](#database-setup)
 - [API Documentation](#api-documentation)
-- [Role Responsibilities](#role-responsibilities)
 - [Subscription Plans](#subscription-plans)
 - [Project Structure](#project-structure)
-- [Testing](#testing)
-- [Assumptions](#assumptions)
+- [Security Considerations](#security-considerations)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
 ---
 
@@ -130,7 +132,7 @@ This application follows **Clean Architecture** principles with clear separation
 
 ## 🛠️ Technology Stack
 
-- **Framework**: Laravel 11.x
+- **Framework**: Laravel 12.x
 - **PHP**: 8.2+
 - **Database**: MySQL 8.0+ / PostgreSQL 14+
 - **Authentication**: Laravel Sanctum
@@ -272,20 +274,6 @@ After running `php artisan migrate --seed`, you'll have:
 - Free Plan (max 5 tasks)
 - Pro Plan (unlimited tasks)
 
-**Test Companies:**
-
-1. **Acme Corp** (Free Plan)
-   - Owner: owner@acme.com / password
-   - Member: member@acme.com / password
-
-2. **Tech Innovations** (Pro Plan)
-   - Owner: owner@techinnovations.com / password
-   - Member: member@techinnovations.com / password
-
-**Admin Account:**
-- Email: admin@example.com
-- Password: password
-
 ---
 
 ## 🔌 API Documentation
@@ -311,41 +299,6 @@ Content-Type: application/json
 ### Endpoints
 
 #### 1. Authentication
-
-##### Register
-```http
-POST /api/register
-```
-
-**Request Body:**
-```json
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "password_confirmation": "password123",
-  "company_name": "My Company"
-}
-```
-
-**Response (201):**
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "John Doe",
-    "email": "john@example.com",
-    "role": "owner",
-    "company_id": 1
-  },
-  "token": "1|abc123...",
-  "company": {
-    "id": 1,
-    "name": "My Company",
-    "status": "active"
-  }
-}
-```
 
 ##### Login
 ```http
@@ -373,15 +326,20 @@ POST /api/login
 }
 ```
 
-##### Logout
+##### Get Current User
 ```http
-POST /api/logout
+GET /api/me
 ```
 
 **Response (200):**
 ```json
 {
-  "message": "Logged out successfully"
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "owner",
+  "company_id": 1,
+  "is_active": true
 }
 ```
 
@@ -547,41 +505,6 @@ When limit exceeded (429):
 
 ---
 
-## 👥 Role Responsibilities
-
-### Admin
-- **Scope**: System-wide access
-- **Abilities**:
-  - Manage all companies
-  - Manage all users
-  - View all tasks across tenants
-  - System configuration
-- **Restrictions**: Cannot be part of any company
-
-### Company Owner
-- **Scope**: Single company (tenant)
-- **Abilities**:
-  - Full CRUD on company tasks
-  - Invite new users to company
-  - Activate/deactivate company members
-  - Manage company settings
-  - Upgrade/downgrade subscription
-- **Restrictions**: Cannot access other companies' data
-
-### Company Member
-- **Scope**: Single company (tenant)
-- **Abilities**:
-  - Create tasks
-  - View tasks within their company
-  - Update their own tasks
-  - Delete their own tasks
-- **Restrictions**: 
-  - Cannot manage users
-  - Cannot access other companies' data
-  - Cannot change company settings
-
----
-
 ## 💳 Subscription Plans
 
 ### Free Plan
@@ -628,12 +551,6 @@ laravel-saas-app/
 │   │   ├── TaskPriority.php
 │   │   ├── TaskStatus.php
 │   │   └── UserRole.php
-│   │
-│   ├── Events/                     # Event classes
-│   │   └── TaskCreated.php
-│   │
-│   ├── Listeners/                  # Event listeners
-│   │   └── SendTaskCreatedNotification.php
 │   │
 │   ├── Http/
 │   │   ├── Controllers/
@@ -720,62 +637,6 @@ laravel-saas-app/
 
 ---
 
-## 🧪 Testing
-
-### Run All Tests
-```bash
-php artisan test
-```
-
-### Run Specific Test Suite
-```bash
-php artisan test --testsuite=Feature
-php artisan test --testsuite=Unit
-```
-
-### Run with Coverage
-```bash
-php artisan test --coverage
-```
-
-### Test Database
-Tests use an in-memory SQLite database by default. Configure in `phpunit.xml`:
-
-```xml
-<env name="DB_CONNECTION" value="sqlite"/>
-<env name="DB_DATABASE" value=":memory:"/>
-```
-
----
-
-## 📝 Assumptions
-
-1. **Single Company Membership**: Each user belongs to exactly one company. Users cannot be members of multiple companies simultaneously.
-
-2. **Immutable Plan Limits**: Plan limits (e.g., max tasks) are defined in the database but can only be changed by administrators, not through the API.
-
-3. **Company Creation on Registration**: When a user registers, a new company is automatically created with the user as the owner on the Free plan.
-
-4. **Soft Deletes**: Tasks use soft deletes to maintain data integrity and allow for potential recovery.
-
-5. **Email Verification**: Email verification is not implemented but can be easily added using Laravel's built-in email verification features.
-
-6. **Task Ownership**: All tasks belong to companies, not individual users. Any company member can view/edit any task within their company (subject to policy restrictions).
-
-7. **Queue Configuration**: The application uses database queues by default. For production, Redis is recommended for better performance.
-
-8. **Rate Limiting**: API rate limiting is set to 60 requests/minute per user. This can be adjusted in `app/Providers/RouteServiceProvider.php`.
-
-9. **Timezone**: All dates and times are stored in UTC. Application timezone can be configured in `config/app.php`.
-
-10. **File Storage**: No file upload functionality is implemented. If needed, use Laravel's filesystem and cloud storage integration.
-
-11. **Payment Integration**: Subscription management does not include payment gateway integration (Stripe, PayPal, etc.). This would be added based on business requirements.
-
-12. **API Versioning**: API routes are not versioned (e.g., `/api/v1/`). For production, consider implementing versioning for backward compatibility.
-
----
-
 ## 🔒 Security Considerations
 
 1. **Token Management**: API tokens should be stored securely and rotated regularly
@@ -833,15 +694,6 @@ This project is licensed under the MIT License.
 
 ---
 
-## 📞 Support
-
-For issues and questions:
-- Create an issue in the repository
-- Email: support@example.com
-- Documentation: https://laravel.com/docs
-
----
-
 ## 🙏 Acknowledgments
 
 - Laravel Framework - Taylor Otwell and contributors
@@ -851,4 +703,4 @@ For issues and questions:
 
 ---
 
-**Built with ❤️ using Laravel 11**
+**Built with ❤️ using Laravel 12**
